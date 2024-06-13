@@ -101,7 +101,7 @@ needed to create the necessary model components:
 
 ```python
 # Training Params
-epochs = 35
+epochs = 10
 view_length = 200
 rest_length = 1000
 
@@ -117,27 +117,34 @@ wiring:
 
 ```python
 with LavaContext("Model") as model:
-    z0 = LIFCell("z0", n_units=n_in, thr_theta_init=dist.constant(0.), dt=dt,
-                 tau_m=50., v_decay=0., tau_theta=500.,
+    z0 = LIFCell("z0", n_units=n_in,
+                 dt=dt,
+                 tau_m=1., v_decay=0., tau_theta=500., resist_m=1.,
                  refract_T=0.)  ## IF cell
     z1e = LIFCell("z1e", n_units=n_hid,
                   thr_theta_init=dist.uniform(amin=-2, amax=2.),
-                  dt=dt, tau_m=100., tau_theta=500.)  ## excitatory LIF cell
+                  dt=dt, tau_m=100., resist_m=0.2,  tau_theta=500.)  ## excitatory LIF cell
     z1i = LIFCell("z1i", n_units=n_hid,
-                  thr_theta_init=dist.uniform(amin=-2, amax=2.),
-                  dt=dt, tau_m=100., thr=-40., v_rest=-60., v_reset=-45.,
+                  thr_theta_init=dist.uniform(amin=-2,  amax=2.),
+                  dt=dt, tau_m=1., thr=-40., v_rest=-60., v_reset=-45.,
                   theta_plus=0.)  ## inhibitory LIF cell
 
-    tr0 = GatedTrace("tr0", n_units=n_in, dt=dt, tau_tr=20.)
-    tr1 = GatedTrace("tr1", n_units=n_hid, dt=dt, tau_tr=20.)
+    tr0 = GatedTrace("tr0", n_units=n_in, dt=dt, tau_tr=10.)
+    tr1 = GatedTrace("tr1", n_units=n_hid, dt=dt, tau_tr=10.)
 
-    W1 = TraceSTDPSynapse("W1", weight_init=dist.uniform(amin=0, amax=0.3),
-                          shape=(n_in, n_hid), dt=dt, Aplus=0.011,
-                          Aminus=0.0011,
-                          preTrace_target=0.055)
-    W1ie = StaticSynapse("W1ie", weight_init=dist.hollow(120.),
-                         shape=(n_hid, n_hid), dt=dt)
-    W1ei = StaticSynapse("W1ei", weight_init=dist.eye(22.5),
+    W1 = TraceSTDPSynapse("W1",
+                          weight_init=dist.uniform(amin=0, amax=0.3),
+                          shape=(n_in, n_hid),
+                          dt=dt,
+                          Aplus=0.0011 * 40,
+                          Aminus=0.00011 * 40,
+                          preTrace_target=0.4,
+                          resist_scale=10)
+    W1ie = StaticSynapse("W1ie",
+                         weight_init=dist.uniform(amin=0, amax=1, hollow=True),
+                         shape=(n_hid, n_hid), dt=dt, resist_scale=10)
+    W1ei = StaticSynapse("W1ei",
+                         weight_init=dist.eye(22.5),
                          shape=(n_hid, n_hid), dt=dt)
 
     M = Monitor("M", default_window_length=view_length)
